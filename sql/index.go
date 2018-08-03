@@ -413,6 +413,12 @@ func (r *IndexRegistry) validateIndexToAdd(idx Index) error {
 		}
 
 		if exprListsEqual(i.Expressions(), idx.Expressions()) {
+			if driver, ok := r.drivers[idx.Driver()]; ok {
+				if err := driver.Delete(idx); err != nil {
+					return err
+				}
+			}
+
 			return ErrIndexExpressionAlreadyRegistered.New(
 				strings.Join(idx.Expressions(), ", "),
 			)
