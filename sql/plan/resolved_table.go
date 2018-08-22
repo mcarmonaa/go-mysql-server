@@ -36,12 +36,18 @@ func (*ResolvedTable) Children() []sql.Node {
 
 // RowIter implements the RowIter interface.
 func (t *ResolvedTable) RowIter(ctx *sql.Context) (sql.RowIter, error) {
+	span, ctx := ctx.Span("plan.ResolvedTable")
+
 	partitions, err := t.Table.Partitions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return &tableIter{table: t.Table, partitions: partitions}, nil
+	return sql.NewSpanIter(span, &tableIter{
+		ctx:        ctx,
+		table:      t.Table,
+		partitions: partitions,
+	}), nil
 }
 
 // TransformUp implements the Transformable interface.
@@ -55,6 +61,7 @@ func (t *ResolvedTable) TransformExpressionsUp(f sql.TransformExprFunc) (sql.Nod
 }
 
 type tableIter struct {
+	ctx        *sql.Context
 	table      sql.Table
 	partitions sql.PartitionIter
 	partition  sql.Partition
@@ -78,7 +85,7 @@ func (i *tableIter) Next() (sql.Row, error) {
 	}
 
 	if i.rows == nil {
-		rows, err := i.table.PartitionRows(i.partition)
+		rows, err := i.table.PartitionRows(i.ctx, i.partition)
 		if err != nil {
 			return nil, err
 		}

@@ -3,13 +3,17 @@ package sqle_test
 import (
 	"context"
 	"io"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/src-d/go-mysql-server.v0"
 	"gopkg.in/src-d/go-mysql-server.v0/mem"
 	"gopkg.in/src-d/go-mysql-server.v0/sql"
 	"gopkg.in/src-d/go-mysql-server.v0/sql/analyzer"
+	"gopkg.in/src-d/go-mysql-server.v0/sql/index/pilosa"
 	"gopkg.in/src-d/go-mysql-server.v0/sql/parse"
 	"gopkg.in/src-d/go-mysql-server.v0/test"
 
@@ -764,149 +768,149 @@ func TestStarPanic197(t *testing.T) {
 	require.Len(rows, 3)
 }
 
-// func TestIndexes(t *testing.T) {
-// 	e := newEngine(t)
+func TestIndexes(t *testing.T) {
+	e := newEngine(t)
 
-// 	tmpDir, err := ioutil.TempDir(os.TempDir(), "pilosa-test")
-// 	require.NoError(t, err)
+	tmpDir, err := ioutil.TempDir(os.TempDir(), "pilosa-test")
+	require.NoError(t, err)
 
-// 	require.NoError(t, os.MkdirAll(tmpDir, 0644))
-// 	e.Catalog.RegisterIndexDriver(pilosa.NewIndexDriver(tmpDir))
+	require.NoError(t, os.MkdirAll(tmpDir, 0644))
+	e.Catalog.RegisterIndexDriver(pilosa.NewIndexDriver(tmpDir))
 
-// 	_, _, err = e.Query(
-// 		sql.NewEmptyContext(),
-// 		"CREATE INDEX myidx ON mytable (i) WITH (async = false)",
-// 	)
-// 	require.NoError(t, err)
+	_, _, err = e.Query(
+		sql.NewEmptyContext(),
+		"CREATE INDEX myidx ON mytable (i) WITH (async = false)",
+	)
+	require.NoError(t, err)
 
-// 	_, _, err = e.Query(
-// 		sql.NewEmptyContext(),
-// 		"CREATE INDEX myidx_multi ON mytable (i, s) WITH (async = false)",
-// 	)
-// 	require.NoError(t, err)
+	_, _, err = e.Query(
+		sql.NewEmptyContext(),
+		"CREATE INDEX myidx_multi ON mytable (i, s) WITH (async = false)",
+	)
+	require.NoError(t, err)
 
-// 	defer func() {
-// 		done, err := e.Catalog.DeleteIndex("mydb", "myidx", true)
-// 		require.NoError(t, err)
-// 		<-done
+	defer func() {
+		done, err := e.Catalog.DeleteIndex("mydb", "myidx", true)
+		require.NoError(t, err)
+		<-done
 
-// 		done, err = e.Catalog.DeleteIndex("foo", "myidx_multi", true)
-// 		require.NoError(t, err)
-// 		<-done
-// 	}()
+		done, err = e.Catalog.DeleteIndex("foo", "myidx_multi", true)
+		require.NoError(t, err)
+		<-done
+	}()
 
-// 	testCases := []struct {
-// 		query    string
-// 		expected []sql.Row
-// 	}{
-// 		{
-// 			"SELECT * FROM mytable WHERE i = 2",
-// 			[]sql.Row{
-// 				{int64(2), "second row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i > 1",
-// 			[]sql.Row{
-// 				{int64(3), "third row"},
-// 				{int64(2), "second row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i < 3",
-// 			[]sql.Row{
-// 				{int64(1), "first row"},
-// 				{int64(2), "second row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i <= 2",
-// 			[]sql.Row{
-// 				{int64(2), "second row"},
-// 				{int64(1), "first row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i >= 2",
-// 			[]sql.Row{
-// 				{int64(2), "second row"},
-// 				{int64(3), "third row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i = 2 AND s = 'second row'",
-// 			[]sql.Row{
-// 				{int64(2), "second row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i = 2 AND s = 'third row'",
-// 			([]sql.Row)(nil),
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i BETWEEN 1 AND 2",
-// 			[]sql.Row{
-// 				{int64(1), "first row"},
-// 				{int64(2), "second row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i = 1 OR i = 2",
-// 			[]sql.Row{
-// 				{int64(1), "first row"},
-// 				{int64(2), "second row"},
-// 			},
-// 		},
-// 		{
-// 			"SELECT * FROM mytable WHERE i = 1 AND i = 2",
-// 			([]sql.Row)(nil),
-// 		},
-// 	}
+	testCases := []struct {
+		query    string
+		expected []sql.Row
+	}{
+		{
+			"SELECT * FROM mytable WHERE i = 2",
+			[]sql.Row{
+				{int64(2), "second row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i > 1",
+			[]sql.Row{
+				{int64(3), "third row"},
+				{int64(2), "second row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i < 3",
+			[]sql.Row{
+				{int64(1), "first row"},
+				{int64(2), "second row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i <= 2",
+			[]sql.Row{
+				{int64(2), "second row"},
+				{int64(1), "first row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i >= 2",
+			[]sql.Row{
+				{int64(2), "second row"},
+				{int64(3), "third row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i = 2 AND s = 'second row'",
+			[]sql.Row{
+				{int64(2), "second row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i = 2 AND s = 'third row'",
+			([]sql.Row)(nil),
+		},
+		{
+			"SELECT * FROM mytable WHERE i BETWEEN 1 AND 2",
+			[]sql.Row{
+				{int64(1), "first row"},
+				{int64(2), "second row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i = 1 OR i = 2",
+			[]sql.Row{
+				{int64(1), "first row"},
+				{int64(2), "second row"},
+			},
+		},
+		{
+			"SELECT * FROM mytable WHERE i = 1 AND i = 2",
+			([]sql.Row)(nil),
+		},
+	}
 
-// 	for _, tt := range testCases {
-// 		t.Run(tt.query, func(t *testing.T) {
-// 			require := require.New(t)
+	for _, tt := range testCases {
+		t.Run(tt.query, func(t *testing.T) {
+			require := require.New(t)
 
-// 			tracer := new(test.MemTracer)
-// 			ctx := sql.NewContext(context.TODO(), sql.WithTracer(tracer))
+			tracer := new(test.MemTracer)
+			ctx := sql.NewContext(context.TODO(), sql.WithTracer(tracer))
 
-// 			_, it, err := e.Query(ctx, tt.query)
-// 			require.NoError(err)
+			_, it, err := e.Query(ctx, tt.query)
+			require.NoError(err)
 
-// 			rows, err := sql.RowIterToRows(it)
-// 			require.NoError(err)
+			rows, err := sql.RowIterToRows(it)
+			require.NoError(err)
 
-// 			require.Equal(tt.expected, rows)
-// 			require.Equal("plan.IndexableTable", tracer.Spans[len(tracer.Spans)-1])
-// 		})
-// 	}
-// }
+			require.Equal(tt.expected, rows)
+			require.Equal("plan.ResolvedTable", tracer.Spans[len(tracer.Spans)-1])
+		})
+	}
+}
 
-// func TestCreateIndex(t *testing.T) {
-// 	require := require.New(t)
-// 	e := newEngine(t)
+func TestCreateIndex(t *testing.T) {
+	require := require.New(t)
+	e := newEngine(t)
 
-// 	tmpDir, err := ioutil.TempDir(os.TempDir(), "pilosa-test")
-// 	require.NoError(err)
+	tmpDir, err := ioutil.TempDir(os.TempDir(), "pilosa-test")
+	require.NoError(err)
 
-// 	require.NoError(os.MkdirAll(tmpDir, 0644))
-// 	e.Catalog.RegisterIndexDriver(pilosa.NewIndexDriver(tmpDir))
+	require.NoError(os.MkdirAll(tmpDir, 0644))
+	e.Catalog.RegisterIndexDriver(pilosa.NewIndexDriver(tmpDir))
 
-// 	_, iter, err := e.Query(sql.NewEmptyContext(), "CREATE INDEX myidx ON mytable (i)")
-// 	require.NoError(err)
-// 	rows, err := sql.RowIterToRows(iter)
-// 	require.NoError(err)
-// 	require.Len(rows, 0)
+	_, iter, err := e.Query(sql.NewEmptyContext(), "CREATE INDEX myidx ON mytable (i)")
+	require.NoError(err)
+	rows, err := sql.RowIterToRows(iter)
+	require.NoError(err)
+	require.Len(rows, 0)
 
-// 	defer func() {
-// 		time.Sleep(1 * time.Second)
-// 		done, err := e.Catalog.DeleteIndex("foo", "myidx", true)
-// 		require.NoError(err)
-// 		<-done
+	defer func() {
+		time.Sleep(1 * time.Second)
+		done, err := e.Catalog.DeleteIndex("foo", "myidx", true)
+		require.NoError(err)
+		<-done
 
-// 		require.NoError(os.RemoveAll(tmpDir))
-// 	}()
-// }
+		require.NoError(os.RemoveAll(tmpDir))
+	}()
+}
 
 func TestOrderByGroupBy(t *testing.T) {
 	require := require.New(t)
